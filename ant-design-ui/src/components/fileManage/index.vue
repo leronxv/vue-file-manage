@@ -1,33 +1,43 @@
 <template>
   <div>
-    <div class="top-nav">
-      <div class="nav-left">
-        <span @click="createRootFolder" class="operator-btn">
-          <a-tooltip placement="right">
-            <template slot="title">
-              <span>创建文件夹</span>
-            </template>
-            <a-icon type="folder-add"/>
-          </a-tooltip>
-        </span>
+    <div class="file-operate-container">
+      <div
+          @contextmenu.prevent="showMenuForLeftTree($event)"
+          @dragover="dragOver"
+          :style="{ width: leftWidth + 'px' }"
+          @drop="drop"
+          class="left-menu">
+        <div class="nav-left">
+          <span @click="createRootFolder" class="operator-btn">
+            <a-tooltip placement="right">
+              <template slot="title">
+                <span>创建文件夹</span>
+              </template>
+              <a-icon type="folder-add"/>
+            </a-tooltip>
+          </span>
 
-        <span @click="refresh" class="operator-btn" style="margin-left: 10px">
-          <a-tooltip placement="right">
-            <template slot="title">
-              <span>刷新</span>
-            </template>
-            <a-icon type="reload"/>
-          </a-tooltip>
-        </span>
+          <span @click="refresh" class="operator-btn" style="margin-left: 10px">
+            <a-tooltip placement="right">
+              <template slot="title">
+                <span>刷新</span>
+              </template>
+              <a-icon type="reload"/>
+            </a-tooltip>
+          </span>
+        </div>
+        <file-tree @select="onSelect" :tree-data="fileTreeData.child"></file-tree>
       </div>
-      <div class="nav-right">
-        <div class="breadcrumb">
+      <div id="divider" @mousedown="startDragging"></div>
+      <div @contextmenu.prevent="showMenu($event)" class="right-container" @dragover.prevent @drop="handleDrop">
+        <div class="nav-right">
+          <div class="breadcrumb">
           <span class="pointer" @click="handleBreadcrumb('/',-1)">/
             <span class="separator" v-if="currentPath.split('/').length > 1">></span></span>
-          <span
-              v-for="(item,index) in currentPath.split('/')"
-              :key="index"
-              @click="handleBreadcrumb(item,index)">
+            <span
+                v-for="(item,index) in currentPath.split('/')"
+                :key="index"
+                @click="handleBreadcrumb(item,index)">
               <span class="pointer" v-if="item  + '/' !== fileTreeData.filePath">{{ item }}</span>
               <span
                   class="separator"
@@ -35,21 +45,11 @@
                 >
               </span>
             </span>
+          </div>
+          <div class="search">
+            <a-input-search placeholder="请输入文件名称" enter-button @search="onSearch"/>
+          </div>
         </div>
-        <div class="search">
-          <a-input-search placeholder="请输入文件名称" enter-button @search="onSearch"/>
-        </div>
-      </div>
-    </div>
-    <div class="file-operate-container">
-      <a-card
-          @contextmenu.prevent="showMenuForLeftTree($event)"
-          @dragover="dragOver"
-          @drop="drop"
-          class="left-menu">
-        <file-tree @select="onSelect" :tree-data="fileTreeData.child"></file-tree>
-      </a-card>
-      <a-card @contextmenu.prevent="showMenu($event)" class="right-container" @dragover.prevent @drop="handleDrop">
         <div class="container-title">
           <div class="group-title file-name">文件名</div>
           <div class="group-title upload-date">创建日期</div>
@@ -82,7 +82,7 @@
             </div>
           </div>
         </div>
-      </a-card>
+      </div>
     </div>
 
     <div v-show="showContextMenu" :style="{ top: contextMenuStyle.top, left: contextMenuStyle.left }"
@@ -154,7 +154,8 @@
         <div class="progress-bar" :style="'width:' + progressNumber + '%'"></div>
         <div class="progress-number">
           <div style="float: right">
-            <span v-if="progressNumber !== 100">{{ progressNumber }}%</span> <a-icon v-else type="check-circle" theme="twoTone" two-tone-color="#52c41a" />
+            <span v-if="progressNumber !== 100">{{ progressNumber }}%</span>
+            <a-icon v-else type="check-circle" theme="twoTone" two-tone-color="#52c41a"/>
           </div>
         </div>
       </div>
@@ -200,7 +201,11 @@ export default {
       // 右键的元素 xxx/xxx.jpg
       rightKeyPath: '',
       fileContent: '',
-      fileType: ''
+      fileType: '',
+      isDragging: false,
+      startX: 0,
+      startWidth: 0,
+      leftWidth: 260
     }
   },
   created() {
@@ -362,6 +367,7 @@ export default {
         'jpg': '图片',
         'jpeg': '图片',
         'gif': '图片',
+        'json': 'JSON文件',
         'txt': '文本',
         'zip': '压缩文档',
         'path': '文件夹',
@@ -536,6 +542,25 @@ export default {
     // fileStorage/xx/xx.txt -> /xx/xx.txt
     removePathPrefix(path) {
       return path.replace(this.rootPath, '')
+    },
+    startDragging(event) {
+      this.isDragging = true;
+      this.startX = event.clientX;
+      this.startWidth = this.leftWidth;
+
+      document.addEventListener('mousemove', this.resizePanels);
+      document.addEventListener('mouseup', this.stopDragging);
+    },
+    resizePanels(event) {
+      if (this.isDragging) {
+        const deltaX = event.clientX - this.startX;
+        this.leftWidth = Math.max(this.startWidth + deltaX, 50); // 设置最小宽度
+      }
+    },
+    stopDragging() {
+      this.isDragging = false;
+      document.removeEventListener('mousemove', this.resizePanels);
+      document.removeEventListener('mouseup', this.stopDragging);
     }
   },
   destroyed() {
@@ -545,63 +570,58 @@ export default {
 </script>
 
 <style lang="less" scoped>
-.top-nav {
-  height: 50px;
-  width: 100%;
-  display: flex;
-
-  .nav-left {
-    width: 260px;
-    height: 50px;
-    line-height: 50px;
-    padding: 0 10px;
-    background-color: #fff;
-    border-right: 1px solid #e8e8e8;
-
-    .operator-btn {
-      cursor: pointer;
-    }
-  }
-
-  .nav-right {
-    flex: 1;
-    height: 100%;
-    padding: 0 10px;
-    background-color: #fff;
-    display: flex;
-    justify-content: space-between;
-
-    .breadcrumb {
-      display: flex;
-      align-items: center;
-    }
-
-    .search {
-      display: flex;
-      align-items: center;
-    }
-  }
-}
-
 .file-operate-container {
   display: flex;
   justify-content: space-between;
   overflow-y: auto;
+  padding: 10px;
 
   .left-menu {
-    min-height: calc(100vh - 200px);
-    max-height: calc(100vh - 200px);;
+    height: calc(100vh - 30px);
     overflow-y: auto;
     width: 260px;
     background-color: #fff;
-    border-right: 1px solid #e8e8e8;
+    border: 1px solid #e8e8e8;
+
+    .nav-left {
+      width: 100%;
+      height: 50px;
+      border-bottom: 1px solid #e8e8e8;
+      line-height: 50px;
+      padding: 0 10px;
+      background-color: #fff;
+      border-right: 1px solid #e8e8e8;
+
+      .operator-btn {
+        cursor: pointer;
+      }
+    }
   }
 
   .right-container {
-    min-height: calc(100vh - 200px);
-    max-height: calc(100vh - 200px);;
+    height: calc(100vh - 30px);
     overflow-y: auto;
     flex: 1;
+    border: 1px solid #e8e8e8;
+
+    .nav-right {
+      padding: 0 10px;
+      height: 50px;
+      border-bottom: 1px solid #e8e8e8;
+      background-color: #fff;
+      display: flex;
+      justify-content: space-between;
+
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+      }
+    }
 
     .container-title {
       width: 100%;
@@ -699,14 +719,20 @@ export default {
 
 .progress-container {
   .progress-bar {
-    height:10px;
+    height: 10px;
     background-color: green;
   }
+
   .progress-number {
     width: 100%;
   }
 }
 
+#divider {
+  width: 3px;
+  cursor: col-resize;
+  background: #ccc;
+}
 
 /deep/ .ant-card-body {
   padding: 0;
