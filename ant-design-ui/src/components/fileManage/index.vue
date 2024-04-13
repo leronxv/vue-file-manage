@@ -176,6 +176,7 @@ export default {
       },
       inputFolderName: '',
       previewVisible: false,
+      rootPath: '',
       // 拖动到的目标元素 path
       draggableTargetPath: '',
       // 右键的元素 http://xxx/xxx.jpg
@@ -317,6 +318,7 @@ export default {
       request.getAction('/file-manager/folder-tree').then(res => {
         if (res.success) {
           this.fileTreeData = res.data
+          this.rootPath = res.data.filePath
         }
       })
     },
@@ -510,7 +512,7 @@ export default {
     },
     // fileStorage/xx/xx.txt -> /xx/xx.txt
     removePathPrefix(path) {
-      return path.split('/').slice(1, path.split('/').length).join('/')
+      return path.replace(this.rootPath,'')
     }
   },
   destroyed() {
