@@ -47,7 +47,7 @@ public class FileMangeController {
 
     @PostMapping("/multi-upload")
     public Response<?> uploadMultipleFiles(@RequestParam("files") MultipartFile[] files, @RequestParam String path) {
-        fileManageService.multiUpload(files,path);
+        fileManageService.multiUpload(files, path);
         return Response.success();
     }
 
@@ -71,8 +71,13 @@ public class FileMangeController {
 
     @GetMapping("/rename-path")
     public Response<?> renamePath(@RequestParam String pathName, @RequestParam String newName) {
-        fileManageService.renamePath(pathName,newName);
-       return Response.success();
+        fileManageService.renamePath(pathName, newName);
+        return Response.success();
+    }
+
+    @GetMapping("/file-search/{fileName}")
+    public Response<?> search(@PathVariable String fileName) {
+        return Response.success(fileManageService.search(fileName));
     }
 
     @GetMapping("/static/**")
@@ -103,7 +108,7 @@ public class FileMangeController {
 
     @GetMapping("/download/**")
     public void download(HttpServletRequest request, HttpServletResponse response) {
-        this.view(request,response);
+        this.view(request, response);
     }
 
     private String getFilePath(HttpServletRequest request) {

@@ -56,4 +56,12 @@ public interface FileManageService {
      * @param newName
      */
     void renamePath(String pathName, String newName);
+
+    /**
+     * 搜索文件
+     * @param fileName
+     * @return
+     */
+    List<FileSimpleDigest> search(String fileName);
+
 }

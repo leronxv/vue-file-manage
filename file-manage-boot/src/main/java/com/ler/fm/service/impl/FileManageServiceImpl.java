@@ -1,11 +1,13 @@
 package com.ler.fm.service.impl;
 
+import cn.hutool.core.collection.ConcurrentHashSet;
 import com.ler.fm.config.FmProperties;
 import com.ler.fm.exception.BusinessException;
 import com.ler.fm.request.MoveFileRequest;
 import com.ler.fm.service.FileManageService;
 import com.ler.fm.vo.FileSimpleDigest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,6 +22,8 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -27,7 +31,9 @@ import java.util.stream.Stream;
  */
 @Slf4j
 @Service
-public class FileManageServiceImpl implements FileManageService {
+public class FileManageServiceImpl implements FileManageService, InitializingBean {
+
+    private final Set<String> localIndex = new ConcurrentHashSet<>();
 
     @Resource
     private FmProperties fmProperties;
@@ -37,7 +43,7 @@ public class FileManageServiceImpl implements FileManageService {
         FileSimpleDigest fileSimpleInfo = new FileSimpleDigest();
         fileSimpleInfo.setFileName("/");
         fileSimpleInfo.setFilePath(fmProperties.getStoragePath());
-        this.traverseFolder(fileSimpleInfo);
+        this.traverseFolder(fileSimpleInfo, false);
         return fileSimpleInfo;
     }
 
@@ -131,6 +137,28 @@ public class FileManageServiceImpl implements FileManageService {
         }
     }
 
+    @Override
+    public List<FileSimpleDigest> search(String fileName) {
+        Pattern pattern = Pattern.compile(".*" + fileName + ".*", Pattern.CASE_INSENSITIVE);
+        List<FileSimpleDigest> list = new ArrayList<>();
+        localIndex.stream().filter(item -> pattern.matcher(item).matches()).collect(Collectors.toList()).forEach(item -> {
+            File file = new File(item);
+            String fileExtension = "";
+            int lastIndex = file.getName().lastIndexOf('.');
+            if (lastIndex > 0) {
+                fileExtension = file.getName().substring(lastIndex + 1);
+            }
+            FileSimpleDigest fileSimpleDigest = new FileSimpleDigest();
+            fileSimpleDigest.setFileName(file.getName());
+            fileSimpleDigest.setFilePath(file.getPath());
+            fileSimpleDigest.setFileType(fileExtension);
+            fileSimpleDigest.setCreateTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()));
+            fileSimpleDigest.setFileSize(formatFileSize(file.length()));
+            list.add(fileSimpleDigest);
+        });
+        return list;
+    }
+
     private List<FileSimpleDigest> filterAccessFiles(File[] files) {
         List<File> fileList = Arrays.asList(files);
         Set<File> fileSet = new HashSet<>(fileList);
@@ -158,7 +186,7 @@ public class FileManageServiceImpl implements FileManageService {
         return fileInfoList;
     }
 
-    private void traverseFolder(FileSimpleDigest fileSimpleInfo) {
+    private void traverseFolder(FileSimpleDigest fileSimpleInfo, boolean isInit) {
         File folder = new File(fileSimpleInfo.getFilePath());
         File[] files = folder.listFiles();
         if (files == null) return;
@@ -169,7 +197,11 @@ public class FileManageServiceImpl implements FileManageService {
                 child.setFilePath(file.getPath());
                 child.setFileName(file.getName());
                 fileSimpleInfo.getChild().add(child);
-                traverseFolder(child);
+                traverseFolder(child, isInit);
+            } else {
+                if (isInit) {
+                    localIndex.add(file.getPath());
+                }
             }
         }
     }
@@ -180,5 +212,14 @@ public class FileManageServiceImpl implements FileManageService {
         final String[] units = new String[]{"B", "KB", "MB", "GB", "TB"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
         return String.format("%.1f %s", size / Math.pow(1024, digitGroups), units[digitGroups]);
+    }
+
+    @Override
+    public void afterPropertiesSet() {
+        log.info("starts to initialize the local index");
+        FileSimpleDigest fileSimpleInfo = new FileSimpleDigest();
+        fileSimpleInfo.setFilePath(fmProperties.getStoragePath());
+        this.traverseFolder(fileSimpleInfo, true);
+        log.info("local index is initialized");
     }
 }
