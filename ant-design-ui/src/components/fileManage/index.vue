@@ -36,7 +36,9 @@
               </span>
             </span>
         </div>
-        <div class="search"></div>
+        <div class="search">
+          <a-input-search placeholder="请输入文件名称" enter-button @search="onSearch" />
+        </div>
       </div>
     </div>
     <div class="file-operate-container">
@@ -119,7 +121,7 @@
         @cancel="closePreview"
         @ok="closePreview"
         cancelText="关闭">
-<!--      <office-file-preview v-if="fileType === 'office'" :file-path="rightKeyFilePath"></office-file-preview>-->
+      <office-file-preview v-if="fileType === 'office'" :file-path="rightKeyFilePath"></office-file-preview>
       <img width="600px" v-if="fileType === 'image'" :src="rightKeyFilePath" alt="图片预览">
       <p v-if="fileType === 'txt'">
         {{ fileContent }}
@@ -150,10 +152,12 @@
 import axios from 'axios'
 import FileTree from "@/components/fileManage/fileTree";
 import request from "@/utils/request";
+import OfficeFilePreview from "@/components/OfficeFilePreview/index.vue";
 
 export default {
   name: "fileManage",
   components: {
+    OfficeFilePreview,
     FileTree
   },
   data() {
@@ -493,6 +497,17 @@ export default {
         a.click();
       }
     },
+    onSearch(value) {
+      if(!value) {
+        this.listFilesByPath(this.currentPath)
+        return
+      }
+      request.getAction(`/file-manager/file-search/${value}`).then(res => {
+        if (res.success) {
+          this.fileList = res.data
+        }
+      })
+    },
     // fileStorage/xx/xx.txt -> /xx/xx.txt
     removePathPrefix(path) {
       return path.split('/').slice(1, path.split('/').length).join('/')
@@ -532,6 +547,11 @@ export default {
     justify-content: space-between;
 
     .breadcrumb {
+      display: flex;
+      align-items: center;
+    }
+
+    .search {
       display: flex;
       align-items: center;
     }

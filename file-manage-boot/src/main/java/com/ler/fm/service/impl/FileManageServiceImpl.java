@@ -33,10 +33,10 @@ import java.util.stream.Stream;
 @Service
 public class FileManageServiceImpl implements FileManageService, InitializingBean {
 
-    private final Set<String> localIndex = new ConcurrentHashSet<>();
-
     @Resource
     private FmProperties fmProperties;
+
+    private final Set<String> localIndex = new ConcurrentHashSet<>();
 
     @Override
     public FileSimpleDigest folderTree() {
@@ -52,7 +52,30 @@ public class FileManageServiceImpl implements FileManageService, InitializingBea
         File folder = new File(path);
         File[] files = folder.listFiles();
         if (files == null) return Collections.emptyList();
-        return filterAccessFiles(files);
+        List<File> fileList = Arrays.asList(files);
+        Set<File> fileSet = new HashSet<>(fileList);
+        List<FileSimpleDigest> fileInfoList = new ArrayList<>();
+        if (fileSet.isEmpty()) return Collections.emptyList();
+        for (File file : fileSet) {
+            String fileName = file.getName();
+            String fileExtension = "";
+            int lastIndex = fileName.lastIndexOf('.');
+            if (lastIndex > 0) {
+                fileExtension = fileName.substring(lastIndex + 1);
+            }
+            FileSimpleDigest fileSimpleInfo = new FileSimpleDigest();
+            fileSimpleInfo.setFilePath(file.getPath());
+            fileSimpleInfo.setFileName(fileName);
+            fileSimpleInfo.setCreateTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()));
+            fileSimpleInfo.setFileSize(formatFileSize(file.length()));
+            if (file.isDirectory()) {
+                fileSimpleInfo.setFileType("path");
+            } else {
+                fileSimpleInfo.setFileType(fileExtension);
+            }
+            fileInfoList.add(fileSimpleInfo);
+        }
+        return fileInfoList;
     }
 
     @Override
@@ -67,6 +90,7 @@ public class FileManageServiceImpl implements FileManageService, InitializingBea
                 Path targetPath = Paths.get(filePath, fileName);
                 Files.createDirectories(targetPath.getParent());
                 file.transferTo(targetPath);
+                this.localIndex.add(filePath);
             } catch (IOException e) {
                 log.error("文件{}保存失败:", file.getName(), e);
                 throw new BusinessException("文件" + file.getName() + "保存失败");
@@ -82,6 +106,8 @@ public class FileManageServiceImpl implements FileManageService, InitializingBea
         Path target = Paths.get(targetPath);
         try {
             Files.move(source, target);
+            this.localIndex.remove(originPath);
+            this.localIndex.add(targetPath);
         } catch (FileAlreadyExistsException aex) {
             throw new BusinessException("文件已存在!");
         } catch (IOException e) {
@@ -116,6 +142,7 @@ public class FileManageServiceImpl implements FileManageService, InitializingBea
                             .forEach(File::delete);
                 }
             } else {
+                this.localIndex.remove(pathName);
                 Files.deleteIfExists(path);
             }
         } catch (IOException e) {
@@ -128,7 +155,12 @@ public class FileManageServiceImpl implements FileManageService, InitializingBea
     public void renamePath(String pathName, String newName) {
         Path path = Paths.get(this.fmProperties.getStoragePath() + pathName);
         try {
-            Files.move(path, path.resolveSibling(newName));
+            Path targetPath = Files.move(path, path.resolveSibling(newName));
+            File file = path.toFile();
+            if (file.isFile()) {
+                this.localIndex.remove(pathName);
+                this.localIndex.add(targetPath.toString());
+            }
         } catch (FileAlreadyExistsException aex) {
             throw new BusinessException("文件或文件夹已存在");
         } catch (IOException e) {
@@ -157,33 +189,6 @@ public class FileManageServiceImpl implements FileManageService, InitializingBea
             list.add(fileSimpleDigest);
         });
         return list;
-    }
-
-    private List<FileSimpleDigest> filterAccessFiles(File[] files) {
-        List<File> fileList = Arrays.asList(files);
-        Set<File> fileSet = new HashSet<>(fileList);
-        List<FileSimpleDigest> fileInfoList = new ArrayList<>();
-        if (fileSet.isEmpty()) return Collections.emptyList();
-        for (File file : fileSet) {
-            String fileName = file.getName();
-            String fileExtension = "";
-            int lastIndex = fileName.lastIndexOf('.');
-            if (lastIndex > 0) {
-                fileExtension = fileName.substring(lastIndex + 1);
-            }
-            FileSimpleDigest fileSimpleInfo = new FileSimpleDigest();
-            fileSimpleInfo.setFilePath(file.getPath());
-            fileSimpleInfo.setFileName(fileName);
-            fileSimpleInfo.setCreateTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()));
-            fileSimpleInfo.setFileSize(formatFileSize(file.length()));
-            if (file.isDirectory()) {
-                fileSimpleInfo.setFileType("path");
-            } else {
-                fileSimpleInfo.setFileType(fileExtension);
-            }
-            fileInfoList.add(fileSimpleInfo);
-        }
-        return fileInfoList;
     }
 
     private void traverseFolder(FileSimpleDigest fileSimpleInfo, boolean isInit) {
