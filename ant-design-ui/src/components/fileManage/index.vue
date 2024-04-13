@@ -7,7 +7,7 @@
             <template slot="title">
               <span>创建文件夹</span>
             </template>
-            <a-icon type="folder-add" />
+            <a-icon type="folder-add"/>
           </a-tooltip>
         </span>
 
@@ -16,7 +16,7 @@
             <template slot="title">
               <span>刷新</span>
             </template>
-            <a-icon type="reload" />
+            <a-icon type="reload"/>
           </a-tooltip>
         </span>
       </div>
@@ -37,7 +37,7 @@
             </span>
         </div>
         <div class="search">
-          <a-input-search placeholder="请输入文件名称" enter-button @search="onSearch" />
+          <a-input-search placeholder="请输入文件名称" enter-button @search="onSearch"/>
         </div>
       </div>
     </div>
@@ -68,7 +68,7 @@
               @dragstart="dragStart"
               @dragend="dragEnd(item.filePath,item.fileName)"
               class="file-title file-name">
-            <a-icon :type="getTypeIcon(item.fileType)" />
+            <a-icon :type="getTypeIcon(item.fileType)"/>
             {{ item.fileName }}
           </div>
           <div class="file-title upload-date">{{ item.createTime }}</div>
@@ -77,7 +77,7 @@
           <div class="file-title file-operate">
             <div v-if="item.fileType !== 'path'">
               <span style="color: #2eabff" @click="previewFile(item.filePath)">预览</span>
-              <a-divider type="vertical" />
+              <a-divider type="vertical"/>
               <span style="color: #2eabff" @click="downloadFile(item.filePath)">下载</span>
             </div>
           </div>
@@ -88,27 +88,27 @@
     <div v-show="showContextMenu" :style="{ top: contextMenuStyle.top, left: contextMenuStyle.left }"
          class="custom-menu">
       <div class="custom-menu-item" v-if="rightKeyFilePath && fileType !== 'path'" @click="previewFile()">
-        <a-icon type="search" />
+        <a-icon type="search"/>
         预览
       </div>
       <div class="custom-menu-item" @click="createFolder">
-        <a-icon type="folder-add" />
+        <a-icon type="folder-add"/>
         创建目录
       </div>
       <div class="custom-menu-item" v-if="rightKeyPath" @click="removePath">
-        <a-icon type="delete" />
+        <a-icon type="delete"/>
         删除
       </div>
       <div class="custom-menu-item" v-if="rightKeyPath" @click="renamePath">
-        <a-icon type="form" />
+        <a-icon type="form"/>
         重命名
       </div>
       <div class="custom-menu-item" @click="openFileDialog">
-        <a-icon type="upload" />
+        <a-icon type="upload"/>
         上传
       </div>
       <div class="custom-menu-item" v-if="rightKeyPath && fileType !== 'path'" @click="downloadFile">
-        <a-icon type="download" />
+        <a-icon type="download"/>
         下载
       </div>
     </div>
@@ -134,7 +134,7 @@
         @ok="confirmCreateFolder"
         @cancel="cancelCreateFolder"
     >
-      <a-input v-model="inputFolderName" placeholder="请输入文件夹名称" />
+      <a-input v-model="inputFolderName" placeholder="请输入文件夹名称"/>
     </a-modal>
 
     <a-modal
@@ -143,7 +143,21 @@
         @ok="confirmRename"
         @cancel="cancelRename"
     >
-      <a-input v-model="inputPathName" placeholder="请输入新名称" />
+      <a-input v-model="inputPathName" placeholder="请输入新名称"/>
+    </a-modal>
+
+    <a-modal
+        title="上传进度"
+        :visible="uploadProgressVisible"
+        :footer="null">
+      <div class="progress-container">
+        <div class="progress-bar" :style="'width:' + progressNumber + '%'"></div>
+        <div class="progress-number">
+          <div style="float: right">
+            <span v-if="progressNumber !== 100">{{ progressNumber }}%</span> <a-icon v-else type="check-circle" theme="twoTone" two-tone-color="#52c41a" />
+          </div>
+        </div>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -169,6 +183,8 @@ export default {
       createFolderVisible: false,
       renameVisible: false,
       showContextMenu: false,
+      uploadProgressVisible: false,
+      progressNumber: 0,
       isCreateRootFolder: false,
       contextMenuStyle: {
         top: 0,
@@ -306,13 +322,20 @@ export default {
     },
     uploadFiles(formData) {
       formData.append('path', this.removePathPrefix(this.currentPath))
-      request.postAction(`/file-manager/multi-upload`, formData).then(() => {
+      this.uploadProgressVisible = true
+      axios.post(request.BASE_URL + '/file-manager/multi-upload', formData, {
+        onUploadProgress: progressEvent => {
+          this.progressNumber = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        },
+      }).then(() => {
         this.listFilesByPath(this.currentPath)
+        this.uploadProgressVisible = false
         this.$message.success('文件上传成功')
       }).catch(error => {
         this.$message.error('文件上传失败')
-        console.error('文件上传失败:' + error)
-      })
+        this.uploadProgressVisible = false
+        console.error('上传失败:', error);
+      });
     },
     getFolderTree() {
       request.getAction('/file-manager/folder-tree').then(res => {
@@ -381,7 +404,7 @@ export default {
       }
     },
     listFilesByPath(path) {
-      request.getAction('/file-manager/list-files', { path }).then(res => {
+      request.getAction('/file-manager/list-files', {path}).then(res => {
         if (res.success) {
           this.fileList = res.data
         }
@@ -399,7 +422,7 @@ export default {
       if (this.draggableTargetPath) {
         filePath = filePath.split('/').slice(1, filePath.split('/').length).join('/')
         let targetPath = this.removePathPrefix(this.draggableTargetPath)
-        request.postAction('/file-manager/move-path', { path: filePath, targetPath, fileName }).then(res => {
+        request.postAction('/file-manager/move-path', {path: filePath, targetPath, fileName}).then(res => {
           if (res.success) {
             this.getFolderTree()
             this.listFilesByPath(this.currentPath)
@@ -447,7 +470,7 @@ export default {
       }
       this.createFolderVisible = false
       let folderPath = this.isCreateRootFolder ? this.inputFolderName : this.removePathPrefix(this.currentPath) + '/' + this.inputFolderName
-      request.getAction(`/file-manager/create-folder`, { pathName: folderPath }).then(res => {
+      request.getAction(`/file-manager/create-folder`, {pathName: folderPath}).then(res => {
         if (res.success) {
           this.getFolderTree()
           this.listFilesByPath(this.currentPath)
@@ -460,7 +483,7 @@ export default {
       this.createFolderVisible = false
     },
     removePath() {
-      request.getAction('/file-manager/remove-path', { pathName: this.removePathPrefix(this.rightKeyPath) }).then(res => {
+      request.getAction('/file-manager/remove-path', {pathName: this.removePathPrefix(this.rightKeyPath)}).then(res => {
         if (res.success) {
           this.getFolderTree()
           this.listFilesByPath(this.currentPath)
@@ -500,7 +523,7 @@ export default {
       }
     },
     onSearch(value) {
-      if(!value) {
+      if (!value) {
         this.listFilesByPath(this.currentPath)
         return
       }
@@ -512,7 +535,7 @@ export default {
     },
     // fileStorage/xx/xx.txt -> /xx/xx.txt
     removePathPrefix(path) {
-      return path.replace(this.rootPath,'')
+      return path.replace(this.rootPath, '')
     }
   },
   destroyed() {
@@ -673,6 +696,17 @@ export default {
 .custom-menu-item:hover {
   background-color: #edeff5;
 }
+
+.progress-container {
+  .progress-bar {
+    height:10px;
+    background-color: green;
+  }
+  .progress-number {
+    width: 100%;
+  }
+}
+
 
 /deep/ .ant-card-body {
   padding: 0;
