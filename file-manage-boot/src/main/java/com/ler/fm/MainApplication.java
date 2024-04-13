@@ -7,10 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author leron
  */
 @SpringBootApplication
-public class FileManagerBootApplication {
+public class MainApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(FileManagerBootApplication.class, args);
+        SpringApplication.run(MainApplication.class, args);
     }
 
 }
