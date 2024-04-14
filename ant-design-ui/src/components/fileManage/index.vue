@@ -26,7 +26,7 @@
             </a-tooltip>
           </span>
         </div>
-        <file-tree @select="onSelect" :tree-data="fileTreeData.child"></file-tree>
+        <file-tree @select="onSelect" v-if="fileTreeData.child" :tree-data="fileTreeData.child"></file-tree>
       </div>
       <div id="divider" @mousedown="startDragging"></div>
       <div @contextmenu.prevent="showMenu($event)" class="right-container" @dragover.prevent @drop="handleDrop">
@@ -410,6 +410,7 @@ export default {
       }
     },
     listFilesByPath(path) {
+      path = this.removePathPrefix(path)
       request.getAction('/file-manager/list-files', {path}).then(res => {
         if (res.success) {
           this.fileList = res.data

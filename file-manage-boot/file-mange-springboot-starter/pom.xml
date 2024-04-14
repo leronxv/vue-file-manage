@@ -7,7 +7,7 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>file-manage-springboot-starter</artifactId>
+    <artifactId>file-mange-springboot-starter</artifactId>
     <packaging>jar</packaging>
 
     <name>file-manage-springboot-starter</name>

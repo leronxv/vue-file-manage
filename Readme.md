@@ -14,7 +14,6 @@
 | 拖拽上传     |  ✅   |   ❌    | 📅                                                 |
 | 拖拽批量上传 |  ✅   |   ❌    | 📅                                                 |
 | 重命名       |  ✅   |   ✅    |                                                   |
-| 移动         |  ✅   |   ✅    |                                                   |
 | 拖拽移动     |  ✅   |   ✅    |                                                   |
 | 复制         |  ❌   |   ❌    | 📅                                                 |
 | 解压缩       |  ❌   |   ❌    | 📅                                                 |
@@ -46,7 +45,7 @@ git clone https://gitee.com/leronx/vue-file-manage.git
 ├── assets
 │   └── logo.png
 ├── components
-│   └── fileManage
+│   └── fileManage // vue-file-manage 组件
 ├── main.js
 └── utils
     └── request.js
@@ -71,4 +70,100 @@ getFolderTree() {
 ```
 
 #### 4、集成业务后端
+
+```
+.
+├── file-mange-example  // 演示项目
+│   ├── pom.xml
+│   └── src
+├── file-mange-springboot-starter  // springboot starter
+│   ├── pom.xml
+│   └── src
+└── pom.xml
+```
+
+
+
+项目后端使用 maven 构建，将 `file-manage-springboot-starter` 安装至本地项目仓库
+
+```shell
+cd file-manage-boot/file-mange-springboot-starter
+mvn clean install
+```
+
+在您的项目中引入 `file-manage-springboot-starter` 依赖
+
+```xml
+<dependency>
+    <groupId>com.ler.fm</groupId>
+    <artifactId>file-mange-springboot-starter</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+在 application.yml 新增以下配置
+
+```yml
+spring:
+  servlet:
+  	# (可选)
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
+
+fm:
+	# 文件索引类型，可选择本地化文件索引和 elasticSearch 索引
+	# local | elasticSearch
+  file-index: local
+  storage-path: file-storage/
+```
+
+
+
+### 2、本地开发
+
+如果本项目不能满足您的业务需求，例如给文件夹/文件添加权限功能等场景，需要对本项目进行二次开发
+
+将 file-mange-springboot-starter 模块下除  autoconfigure 包下的所有包拷贝至您的项目即可
+
+```java
+/**
+	* 以文件夹列表为例，进行权限二次开发
+	* @param fileSimpleDigest 文件树
+	* @param permissionsMap 用户具有的资源列表
+	* @param isAdmin 是否为管理员
+	*/
+public static void traverseFolder(FileSimpleDigest fileSimpleDigest, Map<String, Integer> permissionsMap, boolean isAdmin) {
+        File folder = new File(fileSimpleDigest.getFilePath());
+        File[] files = folder.listFiles();
+        if (files == null) return;
+        fileSimpleDigest.setChild(new ArrayList<>());
+        for (File file : files) {
+            if (file.isDirectory()) {
+                boolean hasPer = false;
+                for (String path : permissionsMap.keySet()) {
+                    if (path.startsWith(file.getPath())) {
+                        hasPer = true;
+                        break;
+                    }
+                }
+                if (hasPer || isAdmin) {
+                    Integer level = permissionsMap.get(file.getPath());
+                    FileSimpleDigest child = new FileSimpleDigest();
+                    child.setFilePath(file.getPath());
+                    child.setFileName(file.getName());
+                    child.setAccessLevel(level);
+                    fileSimpleDigest.getChild().add(child);
+                    traverseFolder(child, permissionsMap, isAdmin);
+                }
+            }
+        }
+    }
+```
+
+### 3、单独部署
+
+待补充...
+
+
 

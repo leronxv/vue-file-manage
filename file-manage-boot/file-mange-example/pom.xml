@@ -47,12 +47,13 @@
 
         <dependency>
             <groupId>com.ler.fm</groupId>
-            <artifactId>file-manage-springboot-starter</artifactId>
+            <artifactId>file-mange-springboot-starter</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
     <build>
+        <finalName>app</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -69,7 +70,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>com.ler.fm.MainApplication</mainClass>
+                    <mainClass>com.ler.example.MainApplication</mainClass>
                     <skip>true</skip>
                 </configuration>
                 <executions>
