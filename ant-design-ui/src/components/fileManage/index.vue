@@ -167,7 +167,7 @@
 import axios from 'axios'
 import FileTree from "@/components/fileManage/fileTree";
 import request from "@/utils/request";
-import OfficeFilePreview from "@/components/OfficeFilePreview/index.vue";
+import OfficeFilePreview from "@/components/fileManage/OfficeFilePreview";
 
 export default {
   name: "fileManage",
