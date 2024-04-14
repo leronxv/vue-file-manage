@@ -8,4 +8,5 @@ spring:
       max-request-size: 1GB
 
 fm:
+  file-index: local
   storage-path: file-storage/
