@@ -8,5 +8,8 @@ spring:
       max-request-size: 1GB
 
 fm:
-  file-index: local
+  file-index: elasticsearch
   storage-path: file-storage/
+  elasticsearch:
+    host: 127.0.0.1
+    port: 9200

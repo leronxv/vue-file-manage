@@ -112,13 +112,17 @@ spring:
       max-request-size: 1GB
 
 fm:
-	# 文件索引类型，可选择本地化文件索引和 elasticSearch 索引
-	# local | elasticSearch
+	# 文件索引类型，可选择本地化文件索引和 elasticsearch 索引
+	# local | elasticsearch
   file-index: local
   storage-path: file-storage/
 ```
 
+文件/目录变更监听
 
+例如在文件/目录被重命名、移动目录等操作时记录数据库
+
+// 待补充
 
 ### 2、本地开发
 

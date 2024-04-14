@@ -1,38 +1,29 @@
 package com.ler.example;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import cn.hutool.json.JSONUtil;
+import com.ler.fm.model.SearchResult;
+import com.ler.fm.service.FileSearcher;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import javax.annotation.Resource;
+import java.util.Set;
 
 /**
  * Unit test for simple App.
  */
-public class AppTest 
-    extends TestCase
-{
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public AppTest( String testName )
-    {
-        super( testName );
+@Slf4j
+@SpringBootTest
+public class AppTest {
+
+    @Resource
+    private FileSearcher fileSearcher;
+
+    @Test
+    public void search() {
+        Set<SearchResult> set = fileSearcher.search("文档");
+        log.info(JSONUtil.toJsonStr(set));
     }
 
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite()
-    {
-        return new TestSuite( AppTest.class );
-    }
-
-    /**
-     * Rigourous Test :-)
-     */
-    public void testApp()
-    {
-        assertTrue( true );
-    }
 }

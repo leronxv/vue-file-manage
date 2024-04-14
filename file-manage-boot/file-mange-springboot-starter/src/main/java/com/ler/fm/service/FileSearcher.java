@@ -1,6 +1,6 @@
 package com.ler.fm.service;
 
-import com.ler.fm.vo.FileSimpleDigest;
+import com.ler.fm.model.SearchResult;
 
 import java.util.Set;
 
@@ -14,7 +14,7 @@ public interface FileSearcher {
      * @param fileName
      * @return
      */
-    Set<FileSimpleDigest> search(String fileName);
+    Set<SearchResult> search(String fileName);
 
     /**
      * 添加索引

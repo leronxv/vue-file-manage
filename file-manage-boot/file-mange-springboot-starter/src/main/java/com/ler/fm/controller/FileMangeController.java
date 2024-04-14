@@ -41,7 +41,7 @@ public class FileMangeController {
     }
 
     @GetMapping("/list-files")
-    public Response<?> listFilesByPath(@RequestParam String path) {
+    public Response<?> listFilesByPath(String path) {
         return Response.success(fileManageService.listFileByPath(path));
     }
 

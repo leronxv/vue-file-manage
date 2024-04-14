@@ -69,7 +69,7 @@
               @dragend="dragEnd(item.filePath,item.fileName)"
               class="file-title file-name">
             <a-icon :type="getTypeIcon(item.fileType)"/>
-            {{ item.fileName }}
+            <span v-html="item.fileName"></span>
           </div>
           <div class="file-title upload-date">{{ item.createTime }}</div>
           <div class="file-title file-type">{{ getFileTypeName(item.fileType) }}</div>

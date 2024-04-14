@@ -15,4 +15,28 @@ public class FmProperties {
      */
     private String storagePath;
 
+    /**
+     * 文件索引类型
+     */
+    private String fileIndex;
+
+    /**
+     * es 配置
+     */
+    private ElasticsearchConf elasticsearch;
+
+    /**
+     * es 文件索引名称
+     */
+    private String esIndex = "fm_mange";
+
+    @Data
+    public static class ElasticsearchConf {
+
+        private String host;
+
+        private Integer port;
+
+    }
+
 }
