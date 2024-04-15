@@ -4,6 +4,7 @@ import com.ler.fm.config.FmProperties;
 import com.ler.fm.service.FileSearcher;
 import com.ler.fm.service.impl.DefaultSearcher;
 import com.ler.fm.service.impl.ElasticSearchSearcher;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
@@ -17,6 +18,7 @@ import org.springframework.context.annotation.Import;
 /**
  * @author Leron
  */
+@Slf4j
 @Configuration
 @Import({FmManageRegistry.class})
 @EnableConfigurationProperties(FmProperties.class)
@@ -33,7 +35,12 @@ public class FileMangeAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "fm", name = "file-index", havingValue = "elasticsearch")
     public FileSearcher fileSearcher(FmProperties fmProperties, RestHighLevelClient restHighLevelClient) {
-        return new ElasticSearchSearcher(fmProperties, restHighLevelClient);
+        try {
+            return new ElasticSearchSearcher(fmProperties, restHighLevelClient);
+        } catch (Exception ex) {
+            log.error("elasticsearch index initialization failed, downgrade to local cache", ex);
+            return new DefaultSearcher(fmProperties);
+        }
     }
 
     @Bean

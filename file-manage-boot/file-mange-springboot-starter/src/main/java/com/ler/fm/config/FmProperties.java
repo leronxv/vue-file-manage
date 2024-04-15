@@ -30,6 +30,11 @@ public class FmProperties {
      */
     private String esIndex = "fm_mange";
 
+    /**
+     * 启动时强制重新初始化索引
+     */
+    private boolean forceInitIndex;
+
     @Data
     public static class ElasticsearchConf {
 

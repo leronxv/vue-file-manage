@@ -10,6 +10,8 @@ spring:
 fm:
   file-index: elasticsearch
   storage-path: file-storage/
+  # 启动时强制重新初始化索引
+  force-init-index: true
   elasticsearch:
     host: 127.0.0.1
     port: 9200

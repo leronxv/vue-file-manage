@@ -57,28 +57,30 @@
           <div class="group-title file-size">大小</div>
           <div class="group-title file-operate">操作</div>
         </div>
-        <div
-            class="file-item"
-            @contextmenu.prevent.stop="showMenu($event,item.filePath,item.fileType)"
-            @dblclick="handleDbClick(item)"
-            v-for="(item,index) in fileList"
-            :key="index">
+        <div class="file-list-container">
           <div
-              draggable="true"
-              @dragstart="dragStart"
-              @dragend="dragEnd(item.filePath,item.fileName)"
-              class="file-title file-name">
-            <a-icon :type="getTypeIcon(item.fileType)"/>
-            <span v-html="item.fileName"></span>
-          </div>
-          <div class="file-title upload-date">{{ item.createTime }}</div>
-          <div class="file-title file-type">{{ getFileTypeName(item.fileType) }}</div>
-          <div class="file-title file-size">{{ item.fileSize }}</div>
-          <div class="file-title file-operate">
-            <div v-if="item.fileType !== 'path'">
-              <span style="color: #2eabff" @click="previewFile(item.filePath)">预览</span>
-              <a-divider type="vertical"/>
-              <span style="color: #2eabff" @click="downloadFile(item.filePath)">下载</span>
+              class="file-item"
+              @contextmenu.prevent.stop="showMenu($event,item.filePath,item.fileType)"
+              @dblclick="handleDbClick(item)"
+              v-for="(item,index) in fileList"
+              :key="index">
+            <div
+                draggable="true"
+                @dragstart="dragStart"
+                @dragend="dragEnd(item.filePath,item.fileName)"
+                class="file-title file-name">
+              <a-icon :type="getTypeIcon(item.fileType)"/>
+              <span v-html="item.fileName"></span>
+            </div>
+            <div class="file-title upload-date">{{ item.createTime }}</div>
+            <div class="file-title file-type">{{ getFileTypeName(item.fileType) }}</div>
+            <div class="file-title file-size">{{ item.fileSize }}</div>
+            <div class="file-title file-operate">
+              <div v-if="item.fileType !== 'path'">
+                <span style="color: #2eabff" @click="previewFile(item.filePath)">预览</span>
+                <a-divider type="vertical"/>
+                <span style="color: #2eabff" @click="downloadFile(item.filePath)">下载</span>
+              </div>
             </div>
           </div>
         </div>
@@ -123,6 +125,7 @@
         cancelText="关闭">
       <office-file-preview v-if="fileType === 'office'" :file-path="rightKeyFilePath"></office-file-preview>
       <img width="600px" v-if="fileType === 'image'" :src="rightKeyFilePath" alt="图片预览">
+      <video autoplay width="600px" v-if="fileType === 'video'" :src="rightKeyFilePath"/>
       <p v-if="fileType === 'txt'">
         {{ fileContent }}
       </p>
@@ -241,6 +244,9 @@ export default {
         this.previewVisible = true
       } else if (imageType.indexOf(fileFormat) !== -1) {
         this.fileType = 'image'
+        this.previewVisible = true
+      } else if ('mp4' === fileFormat) {
+        this.fileType = 'video'
         this.previewVisible = true
       } else {
         this.$message.error('该文件不支持预览，请下载后查看')
@@ -737,5 +743,9 @@ export default {
 
 /deep/ .ant-card-body {
   padding: 0;
+}
+
+/deep/ .ant-modal-body {
+  overflow: auto;
 }
 </style>

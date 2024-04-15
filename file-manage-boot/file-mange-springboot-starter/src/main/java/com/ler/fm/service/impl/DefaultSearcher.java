@@ -4,7 +4,6 @@ import cn.hutool.core.collection.ConcurrentHashSet;
 import com.ler.fm.config.FmProperties;
 import com.ler.fm.model.SearchResult;
 import com.ler.fm.service.FileSearcher;
-import com.ler.fm.vo.FileSimpleDigest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -54,9 +53,6 @@ public class DefaultSearcher implements FileSearcher, InitializingBean {
         for (File file : files) {
             localIndex.add(file.getPath());
             if (file.isDirectory()) {
-                FileSimpleDigest child = new FileSimpleDigest();
-                child.setFilePath(file.getPath());
-                child.setFileName(file.getName());
                 initLocalIndex(file.getPath());
             }
         }

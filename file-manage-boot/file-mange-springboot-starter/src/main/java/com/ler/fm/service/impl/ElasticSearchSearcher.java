@@ -3,7 +3,6 @@ package com.ler.fm.service.impl;
 import cn.hutool.extra.spring.SpringUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ler.fm.config.EsRestClientConfig;
 import com.ler.fm.config.FmProperties;
 import com.ler.fm.exception.BusinessException;
 import com.ler.fm.model.EsFileDigest;
@@ -11,13 +10,17 @@ import com.ler.fm.model.SearchResult;
 import com.ler.fm.service.FileSearcher;
 import com.ler.fm.vo.FileSimpleDigest;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.CreateIndexRequest;
+import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -27,16 +30,16 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Leron
@@ -56,7 +59,7 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
     @Override
     public Set<SearchResult> search(String fileName) {
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        sourceBuilder.query(QueryBuilders.matchPhraseQuery("fileName", fileName));
+        sourceBuilder.query(QueryBuilders.matchQuery("fileName", fileName).analyzer("ik_max_word"));
 
         HighlightBuilder highlightBuilder = new HighlightBuilder();
         highlightBuilder.field("fileName");
@@ -65,7 +68,7 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
         SearchRequest searchRequest = new SearchRequest(fmProperties.getEsIndex());
         searchRequest.source(sourceBuilder);
         try {
-            SearchResponse response = restHighLevelClient.search(searchRequest, EsRestClientConfig.COMMON_OPTIONS);
+            SearchResponse response = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);
             SearchHits hits = response.getHits();
             Set<SearchResult> results = new HashSet<>();
             for (SearchHit item : hits) {
@@ -73,25 +76,42 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
                 EsFileDigest esFileDigest = objectMapper.readValue(item.getSourceAsString(), EsFileDigest.class);
                 SearchResult searchResult = new SearchResult();
                 HighlightField highlightField = item.getHighlightFields().get("fileName");
-                searchResult.setFileName(highlightField.getFragments()[0].string().replace("<em>", "<span style='color:red'>").replace("</em>","</span>"));
+                searchResult.setFileName(highlightField.getFragments()[0].string().replace("<em>", "<span style='color:red'>").replace("</em>", "</span>"));
                 searchResult.setFilePath(esFileDigest.getFilePath());
                 results.add(searchResult);
             }
             return results;
         } catch (Exception ex) {
-            log.error("文件搜索失败",ex);
+            log.error("文件搜索失败", ex);
             throw new BusinessException("文件搜索失败!");
         }
     }
 
     @Override
     public void addIndex(String filePath) {
-
+        File file = new File(filePath);
+        IndexRequest request = new IndexRequest(fmProperties.getEsIndex());
+        request.id(filePath);
+        EsFileDigest esFileDigest = new EsFileDigest();
+        esFileDigest.setFileName(file.getName());
+        esFileDigest.setFilePath(file.getPath());
+        ObjectMapper objectMapper = SpringUtil.getBean(ObjectMapper.class);
+        try {
+            request.source(objectMapper.writeValueAsString(esFileDigest), XContentType.JSON);
+            restHighLevelClient.index(request, RequestOptions.DEFAULT);
+        } catch (Exception ex) {
+            log.error("es 索引更新失败", ex);
+        }
     }
 
     @Override
     public void removeIndex(String filePath) {
-
+        DeleteRequest request = new DeleteRequest(fmProperties.getEsIndex(),filePath);
+        try {
+            restHighLevelClient.delete(request,RequestOptions.DEFAULT);
+        } catch (Exception ex) {
+            log.error("es 索引更新失败", ex);
+        }
     }
 
     private void initElasticIndex(String path, Map<String, EsFileDigest> filesMap) {
@@ -117,11 +137,14 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
     public void afterPropertiesSet() throws Exception {
         ObjectMapper objectMapper = SpringUtil.getBean(ObjectMapper.class);
         log.info("starts to initialize the elasticsearch index");
-        GetIndexRequest request = new GetIndexRequest(fmProperties.getEsIndex());
-        if (restHighLevelClient.indices().exists(request, RequestOptions.DEFAULT)) {
-            log.info("es index already exists");
-            return;
+        if (!fmProperties.isForceInitIndex()) {
+            GetIndexRequest request = new GetIndexRequest(fmProperties.getEsIndex());
+            if (restHighLevelClient.indices().exists(request, RequestOptions.DEFAULT)) {
+                log.info("es index already exists");
+                return;
+            }
         }
+        this.initIndex();
         Map<String, EsFileDigest> filesMap = new HashMap<>();
         this.initElasticIndex(fmProperties.getStoragePath(), filesMap);
         BulkRequest bulkRequest = new BulkRequest();
@@ -132,20 +155,47 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
                 indexRequest.source(objectMapper.writeValueAsBytes(v), XContentType.JSON);
                 bulkRequest.add(indexRequest);
             } catch (JsonProcessingException ex) {
-                log.error("索引添加失败", ex);
+                throw new RuntimeException(ex);
             }
         });
         BulkResponse bulk;
         try {
-            bulk = restHighLevelClient.bulk(bulkRequest, EsRestClientConfig.COMMON_OPTIONS);
+            bulk = restHighLevelClient.bulk(bulkRequest, RequestOptions.DEFAULT);
             if (bulk.hasFailures()) {
-                // 降级为本地缓存 TODO
-                log.error("elasticsearch index initialization failed, downgrade to local cache");
+                throw new RuntimeException();
             }
-        } catch (IOException e) {
-            // 降级为本地缓存 TODO
-            log.error("elasticsearch index initialization failed, downgrade to local cache");
+            log.info("elasticsearch index is initialized");
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
         }
-        log.info("elasticsearch index is initialized");
+    }
+
+    private void initIndex() {
+        DeleteIndexRequest delReq = new DeleteIndexRequest(fmProperties.getEsIndex());
+        try {
+            restHighLevelClient.indices().delete(delReq, RequestOptions.DEFAULT);
+        } catch (Exception ex) {
+            log.error(ex.getMessage());
+        }
+        CreateIndexRequest request = new CreateIndexRequest(fmProperties.getEsIndex());
+        try {
+            Resource resource = new ClassPathResource("esMap.json");
+            StringBuilder jsonMapBuilder = new StringBuilder();
+            try (InputStream inputStream = resource.getInputStream();
+                 Scanner scanner = new Scanner(inputStream)) {
+                while (scanner.hasNextLine()) {
+                    jsonMapBuilder.append(scanner.nextLine());
+                }
+            }
+            String jsonMap = jsonMapBuilder.toString();
+            request.mapping(jsonMap, XContentType.JSON);
+            CreateIndexResponse createIndexResponse = restHighLevelClient.indices().create(request, RequestOptions.DEFAULT);
+            boolean acknowledged = createIndexResponse.isAcknowledged();
+            if (!acknowledged) {
+                throw new RuntimeException();
+            }
+        } catch (Exception ex) {
+           throw new RuntimeException(ex);
+        }
     }
 }

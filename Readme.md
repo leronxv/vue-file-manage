@@ -19,6 +19,9 @@
 | 解压缩       |  ❌   |   ❌    | 📅                                                 |
 | 预览         |  ✅   |   -    | 目前支持文本、图片、视频、office文件的预览        |
 | 搜索         |  ✅   |   ✅    | 支持 本地化索引 和 ElasticSearch索引 两种方式搜索 |
+| 文件内容搜索 |  ❌   |   -    | 📅                                                 |
+| 上传进度监听 |  ✅   |   ❌    | 📅                                                 |
+| 断点续传     |  ❌   |   -    | 🤔                                                 |
 
 ## 三、UI框架支持
 
@@ -115,7 +118,12 @@ fm:
 	# 文件索引类型，可选择本地化文件索引和 elasticsearch 索引
 	# local | elasticsearch
   file-index: local
+  # 启动时强制重新初始化索引
+  force-init-index: false
   storage-path: file-storage/
+  elasticsearch:
+    host: 127.0.0.1
+    port: 9200
 ```
 
 文件/目录变更监听
@@ -130,44 +138,41 @@ fm:
 
 将 file-mange-springboot-starter 模块下除  autoconfigure 包下的所有包拷贝至您的项目即可
 
-```java
-/**
-	* 以文件夹列表为例，进行权限二次开发
-	* @param fileSimpleDigest 文件树
-	* @param permissionsMap 用户具有的资源列表
-	* @param isAdmin 是否为管理员
-	*/
-public static void traverseFolder(FileSimpleDigest fileSimpleDigest, Map<String, Integer> permissionsMap, boolean isAdmin) {
-        File folder = new File(fileSimpleDigest.getFilePath());
-        File[] files = folder.listFiles();
-        if (files == null) return;
-        fileSimpleDigest.setChild(new ArrayList<>());
-        for (File file : files) {
-            if (file.isDirectory()) {
-                boolean hasPer = false;
-                for (String path : permissionsMap.keySet()) {
-                    if (path.startsWith(file.getPath())) {
-                        hasPer = true;
-                        break;
-                    }
-                }
-                if (hasPer || isAdmin) {
-                    Integer level = permissionsMap.get(file.getPath());
-                    FileSimpleDigest child = new FileSimpleDigest();
-                    child.setFilePath(file.getPath());
-                    child.setFileName(file.getName());
-                    child.setAccessLevel(level);
-                    fileSimpleDigest.getChild().add(child);
-                    traverseFolder(child, permissionsMap, isAdmin);
-                }
-            }
-        }
-    }
-```
-
 ### 3、单独部署
 
 待补充...
 
+## 五、在线演示
 
+### 1、文件夹创建
+
+![create-folder](images/create-folder.gif)
+
+### 2、删除文件/文件夹
+
+![delete](images/delete.gif)
+
+### 3、上传文件
+
+![single-upload](images/single-upload.gif)
+
+### 4、拖拽上传文件
+
+![muti-upload](images/muti-upload.gif)
+
+### 5、重命名文件/文件夹
+
+![rename](images/rename.gif)
+
+### 6、拖拽移动文件/文件夹
+
+![move](images/move.gif)
+
+### 7、预览文件
+
+![preview](images/preview.gif)
+
+### 8、文件/文件夹搜索
+
+![search](images/search.gif)
 

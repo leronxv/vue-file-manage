@@ -86,6 +86,9 @@ public class FileManageServiceImpl implements FileManageService {
                 String filePath = fmProperties.getStoragePath() + path;
                 String fileName = file.getOriginalFilename();
                 Path targetPath = Paths.get(filePath, fileName);
+                if (targetPath.toFile().exists()) {
+                    targetPath = getNotExistPath(targetPath);
+                }
                 Files.createDirectories(targetPath.getParent());
                 file.transferTo(targetPath);
                 fileSearcher.addIndex(filePath);
@@ -120,6 +123,7 @@ public class FileManageServiceImpl implements FileManageService {
         try {
             Path path = Paths.get(folderPath);
             Files.createDirectory(path);
+            fileSearcher.addIndex(folderPath);
         } catch (FileAlreadyExistsException aex) {
             throw new BusinessException("文件夹已存在");
         } catch (IOException e) {
@@ -186,6 +190,15 @@ public class FileManageServiceImpl implements FileManageService {
             list.add(fileSimpleDigest);
         });
         return list;
+    }
+
+    private Path getNotExistPath(Path targetPath) {
+        String fileName = targetPath.toFile().getName() + " 副本";
+        targetPath = Paths.get(targetPath.getParent().toString(),fileName);
+        if (targetPath.toFile().exists()) {
+            return getNotExistPath(targetPath);
+        }
+        return targetPath;
     }
 
     private void traverseFolder(FileSimpleDigest fileSimpleInfo) {
