@@ -146,7 +146,7 @@ fm:
 
 ### 1、文件夹创建
 
-![create-folder](images/create-folder.gif)
+<img src="images/create-folder.gif" alt="create-folder" style="zoom:50%;" />
 
 ### 2、删除文件/文件夹
 
