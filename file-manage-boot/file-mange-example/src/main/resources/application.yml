@@ -8,9 +8,9 @@ spring:
       max-request-size: 1GB
 
 fm:
-  file-index: elasticsearch
+  file-index: local
   storage-path: file-storage/
-  # 启动时强制重新初始化索引
+  # 启动时强制重新初始化索引 (file-index: elasticsearch 时生效)
   force-init-index: true
   elasticsearch:
     host: 127.0.0.1

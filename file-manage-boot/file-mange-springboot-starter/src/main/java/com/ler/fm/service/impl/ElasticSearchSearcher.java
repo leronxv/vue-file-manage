@@ -97,7 +97,7 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
         esFileDigest.setFilePath(file.getPath());
         ObjectMapper objectMapper = SpringUtil.getBean(ObjectMapper.class);
         try {
-            request.source(objectMapper.writeValueAsString(esFileDigest), XContentType.JSON);
+            request.source(objectMapper.writeValueAsBytes(esFileDigest), XContentType.JSON);
             restHighLevelClient.index(request, RequestOptions.DEFAULT);
         } catch (Exception ex) {
             log.error("es 索引更新失败", ex);
@@ -114,25 +114,6 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
         }
     }
 
-    private void initElasticIndex(String path, Map<String, EsFileDigest> filesMap) {
-        File folder = new File(path);
-        File[] files = folder.listFiles();
-        if (files == null) return;
-        for (File file : files) {
-            EsFileDigest esFileDigest = new EsFileDigest();
-            esFileDigest.setFileName(file.getName());
-            esFileDigest.setFilePath(file.getPath());
-            esFileDigest.setCreateTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()));
-            filesMap.put(file.getName(), esFileDigest);
-            if (file.isDirectory()) {
-                FileSimpleDigest child = new FileSimpleDigest();
-                child.setFilePath(file.getPath());
-                child.setFileName(file.getName());
-                initElasticIndex(file.getPath(), filesMap);
-            }
-        }
-    }
-
     @Override
     public void afterPropertiesSet() throws Exception {
         ObjectMapper objectMapper = SpringUtil.getBean(ObjectMapper.class);
@@ -146,7 +127,7 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
         }
         this.initIndex();
         Map<String, EsFileDigest> filesMap = new HashMap<>();
-        this.initElasticIndex(fmProperties.getStoragePath(), filesMap);
+        this.buildEsFileDigest(fmProperties.getStoragePath(), filesMap);
         BulkRequest bulkRequest = new BulkRequest();
         filesMap.forEach((k, v) -> {
             try {
@@ -167,6 +148,25 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
             log.info("elasticsearch index is initialized");
         } catch (IOException ex) {
             throw new RuntimeException(ex);
+        }
+    }
+
+    private void buildEsFileDigest(String path, Map<String, EsFileDigest> filesMap) {
+        File folder = new File(path);
+        File[] files = folder.listFiles();
+        if (files == null) return;
+        for (File file : files) {
+            EsFileDigest esFileDigest = new EsFileDigest();
+            esFileDigest.setFileName(file.getName());
+            esFileDigest.setFilePath(file.getPath());
+            esFileDigest.setCreateTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()));
+            filesMap.put(file.getName(), esFileDigest);
+            if (file.isDirectory()) {
+                FileSimpleDigest child = new FileSimpleDigest();
+                child.setFilePath(file.getPath());
+                child.setFileName(file.getName());
+                buildEsFileDigest(file.getPath(), filesMap);
+            }
         }
     }
 
