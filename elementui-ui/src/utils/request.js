@@ -1,5 +1,5 @@
 import axios from 'axios'
-import {message} from 'ant-design-vue'
+import {Message} from 'element-ui'
 
 const BASE_URL = 'http://localhost:9999'
 
@@ -24,14 +24,14 @@ service.interceptors.response.use(res => {
         }
         const msg = res.data.message;
         if (code === 500) {
-            message.error(msg)
+            Message.error(msg)
             return Promise.reject(new Error(msg))
         }
         return res.data
     },
     error => {
         console.log(error)
-        message.error("网络异常")
+        Message.error("网络异常")
         return Promise.reject(error)
     }
 )
