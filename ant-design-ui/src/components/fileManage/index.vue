@@ -113,6 +113,10 @@
         <a-icon type="download"/>
         下载
       </div>
+      <div class="custom-menu-item" v-if="rightKeyPath && fileType !== 'path'" @click="unzip">
+        <a-icon type="file-zip"/>
+        解压缩
+      </div>
     </div>
 
     <a-modal
@@ -534,6 +538,14 @@ export default {
         a.download = this.rightKeyFilePath.split('/').pop()
         a.click();
       }
+    },
+    unzip() {
+      request.getAction('/file-manager/unzip', {filePath: this.removePathPrefix(this.rightKeyPath)}).then(res => {
+        if (res.success) {
+          this.getFolderTree()
+          this.listFilesByPath(this.currentPath)
+        }
+      })
     },
     onSearch(value) {
       if (!value) {

@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -22,6 +23,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * @author Leron
@@ -190,6 +193,44 @@ public class FileManageServiceImpl implements FileManageService {
             list.add(fileSimpleDigest);
         });
         return list;
+    }
+
+    @Override
+    public void unzip(String filePath) {
+        filePath = fmProperties.getStoragePath() + filePath;
+        String destDirectory = filePath.substring(0, filePath.lastIndexOf('.'));
+        File destDir = new File(destDirectory);
+        if (!destDir.exists()) {
+            boolean mkdir = destDir.mkdir();
+            if (!mkdir) {
+                throw new BusinessException("文件夹创建失败");
+            }
+        }
+        byte[] buffer = new byte[1024];
+        try {
+            ZipInputStream zis = new ZipInputStream(Files.newInputStream(Paths.get(filePath)));
+            zis.getNextEntry();
+            ZipEntry zipEntry = zis.getNextEntry();
+            while (zipEntry != null) {
+                String fileName = zipEntry.getName();
+                File newFile = new File(destDirectory + File.separator + fileName);
+                new File(newFile.getParent()).mkdirs();
+                FileOutputStream fos = new FileOutputStream(newFile);
+                int len;
+                while ((len = zis.read(buffer)) > 0) {
+                    fos.write(buffer, 0, len);
+                }
+                fos.close();
+                this.fileSearcher.addIndex(newFile.getPath());
+                zipEntry = zis.getNextEntry();
+                zis.closeEntry();
+            }
+            zis.close();
+
+        } catch (IOException ex) {
+            log.error("解压失败:", ex);
+            throw new BusinessException("解压失败:" + ex.getMessage());
+        }
     }
 
     private Path getNotExistPath(Path targetPath) {

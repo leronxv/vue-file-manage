@@ -80,6 +80,12 @@ public class FileMangeController {
         return Response.success(fileManageService.search(fileName));
     }
 
+    @GetMapping("/unzip")
+    public Response<?> unzip(@RequestParam String filePath) {
+        fileManageService.unzip(filePath);
+        return Response.success();
+    }
+
     @GetMapping("/static/**")
     public void view(HttpServletRequest request, HttpServletResponse response) {
         String filePath = getFilePath(request);

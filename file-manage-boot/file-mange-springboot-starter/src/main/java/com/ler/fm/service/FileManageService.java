@@ -64,4 +64,9 @@ public interface FileManageService {
      */
     List<FileSimpleDigest> search(String fileName);
 
+    /**
+     * 解压缩文件
+     * @param filePath
+     */
+    void unzip(String filePath);
 }
