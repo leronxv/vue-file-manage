@@ -128,6 +128,7 @@ public class ElasticSearchSearcher implements FileSearcher, InitializingBean {
         this.initIndex();
         Map<String, EsFileDigest> filesMap = new HashMap<>();
         this.buildEsFileDigest(fmProperties.getStoragePath(), filesMap);
+        if (filesMap.isEmpty()) return;
         BulkRequest bulkRequest = new BulkRequest();
         filesMap.forEach((k, v) -> {
             try {
