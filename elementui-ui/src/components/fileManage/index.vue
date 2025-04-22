@@ -302,7 +302,7 @@ export default {
       const dropZone = event.target
       const targetComponent = this.getComponentFromElement(dropZone)
       const targetVNode = targetComponent._vnode
-      this.showMenu(event, targetVNode.context.$options.propsData.eventKey, 'path')
+      this.showMenu(event, targetVNode.context.$options.propsData.node.data.filePath, 'path')
     },
     closeMenu() {
       this.showContextMenu = false
@@ -431,7 +431,7 @@ export default {
       const dropZone = event.target
       const targetComponent = this.getComponentFromElement(dropZone)
       const targetVNode = targetComponent._vnode
-      this.draggableTargetPath = targetVNode.context.$options.propsData.eventKey
+      this.draggableTargetPath = targetVNode.context.$options.propsData.node.data.filePath
     },
     getComponentFromElement(element) {
       let vm = element.__vue__
